@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  color: #202b27;
+  background: #f2f5f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --forest: #163d37;
+  --forest-soft: #214f48;
+  --teal: #147d72;
+  --teal-light: #e2f2ee;
+  --blue: #617b99;
+  --blue-light: #e8edf3;
+  --amber: #d5a746;
+  --amber-light: #f8f1df;
+  --coral: #d27655;
+  --coral-light: #f8ebe6;
+  --ink: #202b27;
+  --ink-soft: #52615b;
+  --muted: #7b8882;
+  --border: #dfe6e1;
+  --border-strong: #ced8d1;
+  --canvas: #f2f5f2;
+  --surface: #fff;
+  --surface-soft: #f8faf8;
+  --danger: #a74438;
+  --warning: #9b6c18;
+  --success: #207a57;
+  --mono: 'IBM Plex Mono', Consolas, monospace;
+  --shadow-soft: 0 2px 10px rgba(30, 54, 44, 0.045);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
+body { min-height: 100vh; background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5; }
+button, input, textarea { font: inherit; }
+button, a, textarea { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, textarea:focus-visible { outline: 3px solid rgba(20, 125, 114, 0.5); outline-offset: 3px; }
+button { color: inherit; }
+a { color: inherit; }
+::selection { background: #b9ded5; color: #102f2a; }

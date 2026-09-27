@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+.env
+.coverage
+coverage/
+*.db
+models/*.joblib
+models/evaluation.json
+data/raw/*.csv
+data/raw/*.zip
