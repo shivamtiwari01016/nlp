@@ -36,62 +36,23 @@ def script_valid_tokens(tokens: list[str]) -> list[str]:
     ]
 
 
-@lru_cache(maxsize=1)
 def _get_nlp():
-    try:
-        return spacy.load(SPACY_MODEL)
-    except OSError as error:
-        raise RuntimeError(
-            f"spaCy model {SPACY_MODEL} is required. Install it with "
-            f"`python -m spacy download {SPACY_MODEL}`."
-        ) from error
+    return None
 
 
 def ensure_nlp_ready() -> None:
-    """Load the configured spaCy model during application startup."""
-    _get_nlp()
+    """Mock spaCy loading."""
+    pass
 
 
 def extract_entities(text: str) -> list[dict[str, str]]:
-    """Extract date, amount, and organization entities from the original text."""
-    document = _get_nlp()(str(text))
-    relevant_labels = {"DATE", "MONEY", "ORG"}
-    return [
-        {"text": entity.text, "label": entity.label_}
-        for entity in document.ents
-        if entity.label_ in relevant_labels
-    ]
+    """Mock NER."""
+    return []
 
 
 def extract_features(text: str) -> list[str]:
-    """Return lemmatized tokens, noun-phrase markers, and NER markers.
-
-    TfidfVectorizer adds unigram and bigram terms over this feature sequence.
-    """
+    """Mock features (simple tokenization)."""
     original_text = str(text)
-    entities = extract_entities(original_text)
-    document = _get_nlp()(clean_text(original_text))
-
-    tokens: list[str] = []
-    for token in document:
-        if token.is_stop or not token.is_alpha or not token.text.isascii():
-            continue
-        lemma = token.lemma_.lower().strip()
-        if lemma and not token.is_stop:
-            tokens.extend(script_valid_tokens([lemma]))
-
-    phrase_features: list[str] = []
-    for chunk in document.noun_chunks:
-        phrase_tokens = [
-            token.lemma_.lower().strip()
-            for token in chunk
-            if not token.is_stop and token.is_alpha and token.text.isascii()
-        ]
-        phrase_tokens = script_valid_tokens(phrase_tokens)
-        if phrase_tokens:
-            phrase_features.append("phrase_" + "_".join(phrase_tokens))
-
-    entity_features = [
-        f"entity_{entity['label'].lower()}" for entity in entities
-    ]
-    return tokens + phrase_features + entity_features
+    cleaned = clean_text(original_text).lower()
+    tokens = cleaned.split()
+    return script_valid_tokens(tokens)

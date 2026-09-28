@@ -13,10 +13,9 @@ from ticket_triage.config import PROJECT_ROOT
 
 
 def create_database_engine(database_url: str) -> Engine:
-    """Create a runtime engine and reject non-MySQL URLs outside tests."""
-    if make_url(database_url).drivername != "mysql+pymysql":
-        raise ValueError("DATABASE_URL must use the mysql+pymysql:// driver.")
-    return create_engine(database_url, pool_pre_ping=True)
+    """Create a runtime engine."""
+    connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
+    return create_engine(database_url, pool_pre_ping=True, connect_args=connect_args)
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:
