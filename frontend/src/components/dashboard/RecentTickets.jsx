@@ -1,16 +1,11 @@
+import { useState } from 'react'
 import { ArrowUpRight, Clock3 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import CategoryBadge from '../analyzer/CategoryBadge'
-import { getUrgencyPresentation } from '../../utils/urgency'
+import TicketDetailModal from '../analyzer/TicketDetailModal'
+import TicketTable from './TicketTable'
 
-function formatTime(value) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? 'Time unavailable'
-    : new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date)
-}
-
-export default function RecentTickets({ records = [], compact = false, loading = false, error = '' }) {
+export default function RecentTickets({ records = [], compact = false, loading = false, error = '', onDelete }) {
+  const [selectedTicket, setSelectedTicket] = useState(null)
   return (
     <section className={`recent-tickets${compact ? ' recent-tickets--compact' : ''}`}>
       <div className="section-heading section-heading--inline">
@@ -33,31 +28,9 @@ export default function RecentTickets({ records = [], compact = false, loading =
           <Link to="/analyze">Analyze a ticket</Link>
         </div>
       ) : (
-        <div className="table-scroll">
-          <table className="ticket-table">
-            <thead>
-              <tr><th scope="col">Ticket</th><th scope="col">Category</th><th scope="col">Assigned team</th><th scope="col">Status</th><th scope="col">Urgency</th><th scope="col">Created</th></tr>
-            </thead>
-            <tbody>
-              {records.map((record) => {
-                const urgency = getUrgencyPresentation(record.urgency)
-                return (
-                  <tr key={record.ticketId || record.id}>
-                    <td className="ticket-table__text" title={`${record.ticketId || record.id} · ${record.text}`}>
-                      <span>{record.text}</span><small className="ticket-table__id">{record.ticketId || record.id}</small>
-                    </td>
-                    <td><CategoryBadge category={record.category} /></td>
-                    <td>{record.assignedTeam}</td>
-                    <td><span className="snapshot-tag">{record.status.replaceAll('_', ' ')}</span></td>
-                    <td><span className={`table-urgency table-urgency--${urgency.tone}`}><i />{urgency.percentage ?? '—'}% <span>{record.urgencyLevel || urgency.level}</span></span></td>
-                    <td className="ticket-table__time">{formatTime(record.createdAt)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <TicketTable records={records} onSelect={setSelectedTicket} />
       )}
+      {selectedTicket && <TicketDetailModal ticket={selectedTicket} onClose={() => setSelectedTicket(null)} onDelete={onDelete} />}
     </section>
   )
 }

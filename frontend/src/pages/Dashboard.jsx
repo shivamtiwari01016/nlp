@@ -1,32 +1,61 @@
 import { useEffect, useState } from 'react'
 import { Activity, AlertTriangle, BarChart3, Layers3, Ticket } from 'lucide-react'
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import CategoryChart from '../components/dashboard/CategoryChart'
 import RecentTickets from '../components/dashboard/RecentTickets'
 import StatCard from '../components/dashboard/StatCard'
 import { CATEGORIES } from '../data/categories'
-import { getMetrics, getStatistics } from '../services/api'
+import { getMetrics, getStatistics, getUrgencyTimeline } from '../services/api'
+import { useToast } from '../components/ToastProvider'
 
-export default function Dashboard({ history, historyLoading, historyError }) {
+export default function Dashboard({ history, historyLoading, historyError, dataVersion, onDelete }) {
   const [statistics, setStatistics] = useState(null)
   const [metrics, setMetrics] = useState(null)
+  const [timeline, setTimeline] = useState([])
   const [statisticsLoading, setStatisticsLoading] = useState(true)
   const [metricsLoading, setMetricsLoading] = useState(true)
   const [statisticsError, setStatisticsError] = useState('')
   const [metricsError, setMetricsError] = useState('')
+  const [timelineError, setTimelineError] = useState('')
+  const notify = useToast()
 
   useEffect(() => {
     let isMounted = true
     getStatistics()
-      .then((data) => { if (isMounted) setStatistics(data) })
+      .then((data) => { if (isMounted) { setStatistics(data); setStatisticsError('') } })
       .catch((error) => { if (isMounted) setStatisticsError(error.message) })
       .finally(() => { if (isMounted) setStatisticsLoading(false) })
+    getUrgencyTimeline(30)
+      .then((data) => { if (isMounted) { setTimeline(data); setTimelineError('') } })
+      .catch((error) => { if (isMounted) setTimelineError(error.message) })
+
+    return () => { isMounted = false }
+  }, [dataVersion])
+
+  useEffect(() => {
+    let isMounted = true
     getMetrics()
       .then((data) => { if (isMounted) setMetrics(data) })
       .catch((error) => { if (isMounted) setMetricsError(error.message) })
       .finally(() => { if (isMounted) setMetricsLoading(false) })
-
     return () => { isMounted = false }
   }, [])
+
+  async function handleDelete(ticket) {
+    try {
+      await onDelete(ticket)
+      notify(`Ticket ${ticket.ticketId} deleted.`)
+    } catch (error) {
+      notify(error.message, 'error')
+      throw error
+    }
+  }
+
+  const timelineData = timeline.map((point) => ({
+    ...point,
+    time: new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(point.createdAt)),
+    urgency: Math.round(point.urgency * 100),
+  }))
 
   const categoryData = CATEGORIES
     .map(({ name, color }) => ({
@@ -105,7 +134,27 @@ export default function Dashboard({ history, historyLoading, historyError }) {
         </article>
       </section>
 
-      <RecentTickets records={history} loading={historyLoading} error={historyError} />
+      <section className="surface-panel timeline-panel">
+        <div className="section-heading">
+          <div><p className="eyebrow">LAST 30 PERSISTED TICKETS</p><h2>Live urgency timeline</h2></div>
+          <span className="snapshot-tag">Urgency · %</span>
+        </div>
+        {timelineError ? <div className="empty-state"><p>{timelineError}</p></div> : timelineData.length ? (
+          <div className="timeline-chart" role="img" aria-label="Ticket urgency scores over time">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={timelineData} margin={{ top: 16, right: 12, left: -14, bottom: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 5" vertical={false} />
+                <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={35} tick={{ fill: 'var(--muted)', fontSize: 10 }} />
+                <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tick={{ fill: 'var(--muted)', fontSize: 10 }} />
+                <Tooltip formatter={(value, _name, item) => [`${value}% · ${item.payload.category}`, 'Urgency']} />
+                <Line type="monotone" dataKey="urgency" stroke="var(--teal)" strokeWidth={2.5} dot={{ r: 3, fill: 'var(--canvas)', strokeWidth: 2 }} activeDot={{ r: 5 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : <div className="empty-state"><p>No persisted tickets to plot yet.</p></div>}
+      </section>
+
+      <RecentTickets records={history} loading={historyLoading} error={historyError} onDelete={handleDelete} />
     </div>
   )
 }

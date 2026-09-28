@@ -1,9 +1,10 @@
-import { Activity, Cpu, LayoutDashboard, ScanText, X } from 'lucide-react'
+import { Activity, Cpu, LayoutDashboard, ScanText, Search, X } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 
 const NAVIGATION = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/analyze', label: 'Ticket Analyzer', icon: ScanText },
+  { to: '/tickets', label: 'Ticket Search', icon: Search },
   { to: '/pipeline', label: 'NLP Pipeline', icon: Activity },
   { to: '/model', label: 'Model Information', icon: Cpu },
 ]

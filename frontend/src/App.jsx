@@ -2,18 +2,21 @@ import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
 import AppLayout from './components/layout/AppLayout'
-import { checkBackendHealth, getTickets } from './services/api'
+import ToastProvider from './components/ToastProvider'
+import { checkBackendHealth, deleteTicket, getTickets } from './services/api'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ModelInfo = lazy(() => import('./pages/ModelInfo'))
 const Pipeline = lazy(() => import('./pages/Pipeline'))
 const TicketAnalyzer = lazy(() => import('./pages/TicketAnalyzer'))
+const TicketSearch = lazy(() => import('./pages/TicketSearch'))
 
 function App() {
   const [history, setHistory] = useState([])
   const [historyLoading, setHistoryLoading] = useState(true)
   const [historyError, setHistoryError] = useState('')
   const [backendStatus, setBackendStatus] = useState('checking')
+  const [dataVersion, setDataVersion] = useState(0)
 
   useEffect(() => {
     let isMounted = true
@@ -56,30 +59,39 @@ function App() {
     setHistoryLoading(false)
   }
 
+  async function handleDelete(ticket) {
+    await deleteTicket(ticket.ticketId)
+    setHistory((current) => current.filter((item) => item.ticketId !== ticket.ticketId))
+    setDataVersion((current) => current + 1)
+  }
+
   return (
     <BrowserRouter>
-      <Suspense fallback={<div className="route-loading" role="status">Loading workspace…</div>}>
-        <Routes>
-          <Route element={<AppLayout status={backendStatus} />}>
-            <Route index element={<Dashboard history={history} historyLoading={historyLoading} historyError={historyError} />} />
-            <Route
-              path="analyze"
-              element={
-                <TicketAnalyzer
-                  history={history}
-                  historyLoading={historyLoading}
-                  historyError={historyError}
-                  onPrediction={handlePrediction}
-                  backendStatus={backendStatus}
-                />
-              }
-            />
-            <Route path="pipeline" element={<Pipeline />} />
-            <Route path="model" element={<ModelInfo />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </Suspense>
+      <ToastProvider>
+        <Suspense fallback={<div className="route-loading" role="status">Loading workspace…</div>}>
+          <Routes>
+            <Route element={<AppLayout status={backendStatus} />}>
+              <Route index element={<Dashboard history={history} historyLoading={historyLoading} historyError={historyError} dataVersion={dataVersion} onDelete={handleDelete} />} />
+              <Route path="tickets" element={<TicketSearch onDelete={handleDelete} />} />
+              <Route
+                path="analyze"
+                element={
+                  <TicketAnalyzer
+                    history={history}
+                    historyLoading={historyLoading}
+                    historyError={historyError}
+                    onPrediction={handlePrediction}
+                    backendStatus={backendStatus}
+                  />
+                }
+              />
+              <Route path="pipeline" element={<Pipeline />} />
+              <Route path="model" element={<ModelInfo />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+        </Suspense>
+      </ToastProvider>
     </BrowserRouter>
   )
 }

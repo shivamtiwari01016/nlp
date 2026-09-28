@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -142,6 +143,38 @@ def test_prediction_updates_database_statistics_and_history_limit(client):
     assert len(recent) == 1
     assert recent[0]["ticket_id"] == second["ticket_id"]
     assert first["ticket_id"] != second["ticket_id"]
+
+
+def test_ticket_search_timeline_and_delete_endpoints(client):
+    first = client.post("/predict", json={"text": "First payment request"}).json()
+    second = client.post("/predict", json={"text": "Second refund request"}).json()
+    ticket_date = datetime.fromisoformat(first["created_at"]).date().isoformat()
+
+    filtered = client.get(
+        "/api/v1/tickets/search",
+        params={
+            "search": "First",
+            "category": "Billing",
+            "urgency_level": "High",
+            "start_date": ticket_date,
+            "end_date": ticket_date,
+        },
+    )
+    next_page = client.get("/api/v1/tickets/search", params={"limit": 1, "offset": 1})
+    timeline = client.get("/api/v1/tickets/timeline", params={"limit": 2})
+
+    assert filtered.status_code == 200
+    assert [ticket["ticket_id"] for ticket in filtered.json()] == [first["ticket_id"]]
+    assert next_page.status_code == 200
+    assert len(next_page.json()) == 1
+    assert timeline.status_code == 200
+    assert [point["ticket_id"] for point in timeline.json()] == [first["ticket_id"], second["ticket_id"]]
+    assert client.get("/api/v1/tickets/search", params={"start_date": "2026-09-30", "end_date": "2026-09-01"}).status_code == 422
+
+    deleted = client.delete(f"/api/v1/tickets/{first['ticket_id']}")
+    assert deleted.status_code == 204
+    assert client.get(f"/api/v1/tickets/{first['ticket_id']}").status_code == 404
+    assert client.delete("/api/v1/tickets/unknown-id").status_code == 404
 
 
 def test_persistence_failure_returns_safe_service_error(client, monkeypatch, caplog):

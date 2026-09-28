@@ -5,6 +5,12 @@ import Sidebar from './Sidebar'
 
 export default function AppLayout({ status }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [theme, setTheme] = useState(() => localStorage.getItem('support-ops-theme') === 'dark' ? 'dark' : 'light')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('support-ops-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     if (!menuOpen) return undefined
@@ -19,7 +25,7 @@ export default function AppLayout({ status }) {
     <div className="app-shell">
       <Sidebar status={status} isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
       <div className="app-main">
-        <Header status={status} menuOpen={menuOpen} onMenuClick={() => setMenuOpen(true)} />
+        <Header status={status} menuOpen={menuOpen} onMenuClick={() => setMenuOpen(true)} theme={theme} onThemeToggle={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} />
         <main className="main-content" id="main-content">
           <Outlet />
         </main>

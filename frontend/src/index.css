@@ -32,12 +32,59 @@
   --shadow-soft: 0 2px 10px rgba(30, 54, 44, 0.045);
 }
 
-* { box-sizing: border-box; }
-html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
-body { min-height: 100vh; background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.5; }
-button, input, textarea { font: inherit; }
-button, a, textarea { -webkit-tap-highlight-color: transparent; }
-button:focus-visible, a:focus-visible, textarea:focus-visible { outline: 3px solid rgba(20, 125, 114, 0.5); outline-offset: 3px; }
-button { color: inherit; }
-a { color: inherit; }
-::selection { background: #b9ded5; color: #102f2a; }
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(20, 125, 114, 0.5);
+  outline-offset: 3px;
+}
+
+button {
+  color: inherit;
+}
+
+input,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: #b9ded5;
+  color: #102f2a;
+}

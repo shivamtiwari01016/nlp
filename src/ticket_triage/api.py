@@ -1,6 +1,7 @@
 """FastAPI routes coordinating NLP inference and MySQL persistence."""
 
 from contextlib import asynccontextmanager
+from datetime import date
 import json
 import logging
 from pathlib import Path
@@ -153,7 +154,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(CORS_ORIGINS),
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type"],
     )
 
@@ -263,6 +264,43 @@ def create_app(
         return TicketService(session).list_recent(limit)
 
     @app.get(
+        "/api/v1/tickets/search",
+        response_model=list[TicketListResponse],
+        summary="Search persisted tickets",
+    )
+    def search_tickets(
+        limit: int = Query(default=100, ge=1, le=100),
+        offset: int = Query(default=0, ge=0),
+        category: str | None = None,
+        urgency_level: str | None = Query(default=None, pattern="^(Low|Medium|High)$"),
+        search: str | None = Query(default=None, max_length=200),
+        start_date: date | None = None,
+        end_date: date | None = None,
+        session: Session = Depends(get_db),
+    ) -> list[TicketResponse]:
+        if start_date and end_date and start_date > end_date:
+            raise HTTPException(status_code=422, detail="Start date must not follow end date.")
+        return TicketService(session).search(
+            limit=limit,
+            offset=offset,
+            category=category,
+            urgency_level=urgency_level,
+            search=search,
+            start_date=start_date,
+            end_date=end_date,
+        )
+
+    @app.get(
+        "/api/v1/tickets/timeline",
+        summary="Get recent ticket urgency timeline",
+    )
+    def ticket_timeline(
+        limit: int = Query(default=30, ge=1, le=100),
+        session: Session = Depends(get_db),
+    ) -> list[dict]:
+        return TicketService(session).urgency_timeline(limit)
+
+    @app.get(
         "/api/v1/tickets/{ticket_id}",
         response_model=TicketResponse,
         summary="Get a persisted ticket by public ID",
@@ -274,6 +312,16 @@ def create_app(
         if ticket is None:
             raise HTTPException(status_code=404, detail="Ticket not found.")
         return ticket
+
+    @app.delete(
+        "/api/v1/tickets/{ticket_id}",
+        status_code=204,
+        summary="Delete a persisted ticket",
+        responses={404: {"description": "No ticket has this public ID"}},
+    )
+    def delete_ticket(ticket_id: str, session: Session = Depends(get_db)) -> None:
+        if not TicketService(session).delete(ticket_id):
+            raise HTTPException(status_code=404, detail="Ticket not found.")
 
     @app.get(
         "/api/v1/statistics",

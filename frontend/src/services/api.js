@@ -97,6 +97,47 @@ export async function getTickets(limit = 20) {
   }
 }
 
+export async function searchTickets(filters = {}) {
+  try {
+    const { data } = await axios.get(`${API_V1_URL}/tickets/search`, {
+      params: filters,
+      timeout: DATA_TIMEOUT_MS,
+    })
+    if (!Array.isArray(data)) throw new Error('Received an invalid response from the NLP service.')
+    return data.map(normalizeTicket)
+  } catch (error) {
+    throw apiError(error, 'Ticket search is unavailable from the backend.')
+  }
+}
+
+export async function getUrgencyTimeline(limit = 30) {
+  try {
+    const { data } = await axios.get(`${API_V1_URL}/tickets/timeline`, {
+      params: { limit },
+      timeout: DATA_TIMEOUT_MS,
+    })
+    if (!Array.isArray(data)) throw new Error('Received an invalid response from the NLP service.')
+    return data.map((entry) => ({
+      ticketId: entry.ticket_id,
+      createdAt: entry.created_at,
+      urgency: normalizeUrgency(entry.urgency_score),
+      category: entry.category,
+    }))
+  } catch (error) {
+    throw apiError(error, 'The urgency timeline is unavailable from the backend.')
+  }
+}
+
+export async function deleteTicket(ticketId) {
+  try {
+    await axios.delete(`${API_V1_URL}/tickets/${encodeURIComponent(ticketId)}`, {
+      timeout: DATA_TIMEOUT_MS,
+    })
+  } catch (error) {
+    throw apiError(error, 'Ticket not found.')
+  }
+}
+
 export async function getTicket(ticketId) {
   try {
     const { data } = await axios.get(`${API_V1_URL}/tickets/${encodeURIComponent(ticketId)}`, {

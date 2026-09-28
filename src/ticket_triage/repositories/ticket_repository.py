@@ -1,9 +1,10 @@
 """SQLAlchemy persistence operations for tickets and prediction history."""
 
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from secrets import token_hex
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, selectinload
 
@@ -66,6 +67,79 @@ class TicketRepository:
             .where(Ticket.ticket_id == ticket_id)
         )
         return self.session.scalar(statement)
+
+    def delete_by_ticket_id(self, ticket_id: str) -> bool:
+        """Delete ticket and cascade predictions. Returns True if a row was deleted."""
+        ticket = self.session.scalar(
+            select(Ticket).options(selectinload(Ticket.predictions)).where(Ticket.ticket_id == ticket_id)
+        )
+        if ticket is None:
+            return False
+        self.session.delete(ticket)
+        try:
+            self.session.commit()
+        except SQLAlchemyError:
+            self.session.rollback()
+            raise
+        return True
+
+    def list_filtered(
+        self,
+        *,
+        limit: int = 100,
+        offset: int = 0,
+        category: str | None = None,
+        urgency_level: str | None = None,
+        status: str | None = None,
+        search: str | None = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
+    ) -> list[Ticket]:
+        """Return tickets matching optional filter criteria."""
+        statement = (
+            select(Ticket)
+            .join(Ticket.predictions)
+            .options(selectinload(Ticket.predictions))
+            .order_by(Ticket.created_at.desc(), Ticket.id.desc())
+        )
+        if category:
+            statement = statement.where(Prediction.category == category)
+        if urgency_level:
+            statement = statement.where(Prediction.urgency_level == urgency_level)
+        if status:
+            statement = statement.where(Ticket.status == status)
+        if search:
+            statement = statement.where(
+                or_(Ticket.text.ilike(f"%{search}%"), Ticket.ticket_id.ilike(f"%{search}%"))
+            )
+        if start_date:
+            statement = statement.where(
+                Ticket.created_at >= datetime.combine(start_date, time.min)
+            )
+        if end_date:
+            statement = statement.where(
+                Ticket.created_at < datetime.combine(end_date + timedelta(days=1), time.min)
+            )
+        statement = statement.offset(offset).limit(limit)
+        return list(self.session.scalars(statement).all())
+
+    def urgency_timeline(self, limit: int = 30) -> list[dict]:
+        """Return recent tickets with date and urgency score for charting."""
+        rows = self.session.execute(
+            select(Ticket.ticket_id, Ticket.created_at, Prediction.urgency_score, Prediction.category)
+            .join(Ticket.predictions)
+            .order_by(Ticket.created_at.desc(), Ticket.id.desc())
+            .limit(limit)
+        ).all()
+        return [
+            {
+                "ticket_id": r.ticket_id,
+                "created_at": r.created_at.isoformat(),
+                "urgency_score": round(float(r.urgency_score), 4),
+                "category": r.category,
+            }
+            for r in reversed(rows)
+        ]
 
     def statistics(self) -> dict:
         total_tickets = self.session.scalar(select(func.count(Ticket.id))) or 0

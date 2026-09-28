@@ -1,5 +1,7 @@
 """Ticket read workflows and API DTO mapping."""
 
+from datetime import date
+
 from sqlalchemy.orm import Session
 
 from ticket_triage.models import Ticket
@@ -33,6 +35,34 @@ class TicketService:
     def get_by_ticket_id(self, ticket_id: str) -> TicketResponse | None:
         ticket = self.repository.get_by_ticket_id(ticket_id)
         return to_ticket_response(ticket) if ticket is not None else None
+
+    def search(
+        self,
+        *,
+        limit: int,
+        offset: int,
+        category: str | None,
+        urgency_level: str | None,
+        search: str | None,
+        start_date: date | None,
+        end_date: date | None,
+    ) -> list[TicketResponse]:
+        tickets = self.repository.list_filtered(
+            limit=limit,
+            offset=offset,
+            category=category,
+            urgency_level=urgency_level,
+            search=search,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        return [to_ticket_response(ticket) for ticket in tickets]
+
+    def urgency_timeline(self, limit: int) -> list[dict]:
+        return self.repository.urgency_timeline(limit)
+
+    def delete(self, ticket_id: str) -> bool:
+        return self.repository.delete_by_ticket_id(ticket_id)
 
     def statistics(self) -> StatisticsResponse:
         return StatisticsResponse(**self.repository.statistics())
